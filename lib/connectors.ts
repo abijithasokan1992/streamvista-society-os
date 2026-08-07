@@ -76,8 +76,8 @@ export async function executeConnector(id: ConnectorId, command: string): Promis
 
     return {
       ok: true,
-      verified: true,
-      message: `${definitions[id].name} bridge executed and returned evidence.`,
+      verified: false,
+      message: `${definitions[id].name} bridge accepted the command, but generic HTTP success is not verification. Connector-specific read-back verification is still required.`,
       evidence,
     };
   } catch (error) {

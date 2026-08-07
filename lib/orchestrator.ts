@@ -35,18 +35,18 @@ export async function executeCommand(input: CommandInput): Promise<ExecutionResu
   if (!route) {
     return {
       id: crypto.randomUUID(),
-      status: 'success',
-      intent: 'general',
+      status: 'failed',
+      intent: 'unsupported',
       agent: 'vista-core-agent',
-      message: 'Vista Core accepted and processed the command.',
-      verified: true,
+      message: 'Unsupported command. No connector was executed and no result was verified.',
+      verified: false,
     };
   }
 
   const execution = await executeConnector(route.intent, parsed.command);
   return {
     id: crypto.randomUUID(),
-    status: execution.ok ? 'success' : 'waiting',
+    status: execution.ok ? (execution.verified ? 'success' : 'waiting') : 'failed',
     intent: route.intent,
     agent: route.agent,
     message: execution.message,
