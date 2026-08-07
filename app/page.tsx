@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type Result = {
   id?: string;
@@ -11,33 +11,42 @@ type Result = {
   verified?: boolean;
 };
 
-const modules = [
-  ['Vista Core', 'ONLINE'],
-  ['Agent Orchestrator', 'ONLINE'],
-  ['Voice Gateway', 'READY'],
-  ['GitHub', 'BIND'],
-  ['Mail', 'BIND'],
-  ['Calendar', 'BIND'],
-  ['Deployment', 'BIND'],
-  ['Business Agent', 'READY'],
-];
+type Connector = { id: string; name: string; configured: boolean; mode: string };
 
 export default function Home() {
   const [command, setCommand] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [running, setRunning] = useState(false);
+  const [connectors, setConnectors] = useState<Connector[]>([]);
+
+  useEffect(() => {
+    fetch('/api/integrations', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => setConnectors(data.connectors ?? []))
+      .catch(() => setConnectors([]));
+  }, []);
+
+  const modules = useMemo(() => [
+    ['Vista Core', 'ONLINE'],
+    ['Agent Orchestrator', 'ONLINE'],
+    ['iPhone / Voice Gateway', 'READY'],
+    ...connectors.map((item) => [item.name, item.configured ? 'CONNECTED' : 'UNBOUND']),
+  ], [connectors]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!command.trim()) return;
     setRunning(true);
-    const response = await fetch('/api/command', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ command, source: 'web' }),
-    });
-    setResult(await response.json());
-    setRunning(false);
+    try {
+      const response = await fetch('/api/command', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ command, source: 'web' }),
+      });
+      setResult(await response.json());
+    } finally {
+      setRunning(false);
+    }
   }
 
   return (
@@ -47,14 +56,14 @@ export default function Home() {
           <p className="eyebrow">STREAMVISTA</p>
           <h1>Vista OS Command Center</h1>
         </div>
-        <span className="pill">V1 CORE</span>
+        <span className="pill">V1 FULL STACK</span>
       </header>
 
       <section className="hero panel">
         <div>
           <p className="eyebrow">OWNER CONTROL PLANE</p>
           <h2>One command. The correct agent. Verified execution.</h2>
-          <p className="muted">The full-stack operating layer for voice, web, iPhone workflows, agents and StreamVista operations.</p>
+          <p className="muted">Web, iPhone, voice, agents and StreamVista workflows share one execution plane. External actions only show verified after a bound connector returns evidence.</p>
         </div>
         <div className="health"><span className="dot" /> Core healthy</div>
       </section>
