@@ -1,39 +1,68 @@
-# StreamVista Society OS
+# Vista OS — StreamVista Command Center
 
-A simple static starter site for the StreamVista Society OS project.
+Vista OS is the canonical full-stack AI operating layer for StreamVista workflows. V1 is designed around one execution contract:
 
-## What’s included
+**Command → Route → Agent → Execute → Verify → Report**
 
-- `index.html` — landing page with hero, features, and call-to-action sections
-- `styles.css` — responsive dark-themed styles
-- `script.js` — small enhanced banner for the live site
+## V1 modules
 
-## Deploy and host
+- Next.js Command Center UI
+- Server-side command API
+- Intent router and agent orchestrator
+- GitHub/mail/calendar/deployment/business agent routing boundaries
+- Service status endpoint
+- CI build verification
+- Mobile-first responsive control surface
 
-This repository is ready to host as a static web app.
+## Architecture
 
-### GitHub Pages
-
-1. Push the repository to GitHub on the `main` branch.
-2. Enable GitHub Pages in repository settings or use the GitHub CLI.
-3. Set the source to `main` branch and `/` root.
-
-If enabled, the site will be available at:
-
-`https://abijithasokan1992.github.io/streamvista-society-os`
-
-### Local preview
-
-Run a local server from the repository root:
-
-```bash
-python3 -m http.server 8080
+```text
+Voice / iPhone / Web
+        ↓
+Vista Command Center
+        ↓
+Command API
+        ↓
+Agent Orchestrator
+        ↓
+Connector Adapters
+        ↓
+External execution
+        ↓
+Verification + audit result
 ```
 
-Then open `http://localhost:8080`.
+V1 deliberately keeps connector execution behind server-side adapters. A command is never reported as externally verified until the corresponding connector has executed and returned evidence.
 
-## Next steps
+## Run locally
 
-- Replace text, images, and colors with your own branding
-- Add more pages, forms, or dashboard features
-- Connect a custom domain if needed
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+## Production build
+
+```bash
+npm run build
+npm start
+```
+
+## API
+
+`POST /api/command`
+
+```json
+{
+  "command": "Check GitHub and show deployment blockers",
+  "source": "web"
+}
+```
+
+`GET /api/status` returns service status.
+
+## Build policy
+
+Reuse → repair → extend → create new only when necessary. The repository is the canonical home for Vista OS application, orchestration, connectors, infrastructure and device bridges.
