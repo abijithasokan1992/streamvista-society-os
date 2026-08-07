@@ -1,0 +1,94 @@
+'use client';
+
+import { FormEvent, useState } from 'react';
+
+type Result = {
+  id?: string;
+  status?: string;
+  intent?: string;
+  agent?: string;
+  message?: string;
+  verified?: boolean;
+};
+
+const modules = [
+  ['Vista Core', 'ONLINE'],
+  ['Agent Orchestrator', 'ONLINE'],
+  ['Voice Gateway', 'READY'],
+  ['GitHub', 'BIND'],
+  ['Mail', 'BIND'],
+  ['Calendar', 'BIND'],
+  ['Deployment', 'BIND'],
+  ['Business Agent', 'READY'],
+];
+
+export default function Home() {
+  const [command, setCommand] = useState('');
+  const [result, setResult] = useState<Result | null>(null);
+  const [running, setRunning] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!command.trim()) return;
+    setRunning(true);
+    const response = await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ command, source: 'web' }),
+    });
+    setResult(await response.json());
+    setRunning(false);
+  }
+
+  return (
+    <main className="shell">
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">STREAMVISTA</p>
+          <h1>Vista OS Command Center</h1>
+        </div>
+        <span className="pill">V1 CORE</span>
+      </header>
+
+      <section className="hero panel">
+        <div>
+          <p className="eyebrow">OWNER CONTROL PLANE</p>
+          <h2>One command. The correct agent. Verified execution.</h2>
+          <p className="muted">The full-stack operating layer for voice, web, iPhone workflows, agents and StreamVista operations.</p>
+        </div>
+        <div className="health"><span className="dot" /> Core healthy</div>
+      </section>
+
+      <section className="grid">
+        {modules.map(([name, status]) => (
+          <article className="card" key={name}>
+            <p>{name}</p>
+            <strong>{status}</strong>
+          </article>
+        ))}
+      </section>
+
+      <section className="panel commandPanel">
+        <p className="eyebrow">COMMAND</p>
+        <form onSubmit={submit}>
+          <textarea
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder="Example: Check GitHub and show deployment blockers"
+            aria-label="Vista command"
+          />
+          <button disabled={running}>{running ? 'Running…' : 'Execute'}</button>
+        </form>
+        {result && (
+          <div className="result">
+            <div><span>Status</span><b>{result.status}</b></div>
+            <div><span>Agent</span><b>{result.agent}</b></div>
+            <div><span>Intent</span><b>{result.intent}</b></div>
+            <div><span>Verified</span><b>{result.verified ? 'YES' : 'NO'}</b></div>
+            <p>{result.message}</p>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
