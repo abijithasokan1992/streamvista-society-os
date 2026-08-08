@@ -1,68 +1,72 @@
-# Vista OS — StreamVista Command Center
+# StreamVista Society OS — Vista Core
 
-Vista OS is the canonical full-stack AI operating layer for StreamVista workflows. V1 is designed around one execution contract:
+This repository is the canonical source for StreamVista Society OS control-plane work. V2 evolves the original Vista OS command center around one fail-closed execution contract:
 
-**Command → Route → Agent → Execute → Verify → Report**
+**Identity → Command → Plan → Policy → Approval → Agent → Connector → Verify → Audit → Memory → Report**
 
-## V1 modules
+## V2 implemented foundation
 
-- Next.js Command Center UI
-- Server-side command API
-- Intent router and agent orchestrator
-- GitHub/mail/calendar/deployment/business agent routing boundaries
-- Service status endpoint
-- CI build verification
-- Mobile-first responsive control surface
+- Next.js command center UI
+- Supabase session verification for the web command API
+- Founder/Admin/Operator/Viewer RBAC
+- Risk classification and explicit approval gates
+- Five-minute HMAC approval tokens bound to actor + exact command + risk
+- Nine-agent canonical registry: CEO, Founder, Research, Rights, Licensing, Finance, Sales, Communication, QA/Security
+- Multi-intent deterministic planner with optional structured AI reasoning bridge
+- GitHub, Mail, Calendar, Deployment and Business connector boundaries
+- Per-connector credentials with legacy shared-token fallback
+- Explicit bridge verification contract (`verified: true` required)
+- Supabase audit + persistent memory schema with RLS and revoked client access
+- iPhone/voice shortcut gateway restricted to operator role
+- CI typecheck + control-plane regression tests + production build
+- Health/status endpoints that keep production promotion fail closed
 
-## Architecture
+## Execution architecture
 
 ```text
-Voice / iPhone / Web
+Web / iPhone / Voice
         ↓
-Vista Command Center
+Identity + RBAC
         ↓
-Command API
+Vista Core Command API
         ↓
-Agent Orchestrator
+Planner / optional reasoning bridge
         ↓
-Connector Adapters
+Risk policy + approval engine
         ↓
-External execution
+Canonical agent registry
         ↓
-Verification + audit result
+Connector bridges
+        ↓
+Explicit verification evidence
+        ↓
+Audit + persistent memory
+        ↓
+Report
 ```
 
-V1 deliberately keeps connector execution behind server-side adapters. A command is never reported as externally verified until the corresponding connector has executed and returned evidence.
+## Lifecycle truth
 
-## Run locally
+Implemented is not production. Bound is not verified. A successful HTTP response is not verification. `/api/status` therefore keeps `productionPromotionAllowed: false` until authenticated end-to-end runtime evidence and the production gates exist.
+
+## Runtime endpoints
+
+- `GET /api/status` — lifecycle, modules, connector readiness
+- `GET /api/integrations` — connector binding state; never claims production verification
+- `GET /api/me` — authenticated actor + resolved role
+- `POST /api/command` — authenticated command planning/execution
+- `POST /api/approval` — explicit short-lived approval for an exact mutating command
+- `POST /api/shortcut` — secret-protected iPhone/voice gateway, operator role only
+
+## Data migration
+
+Apply `supabase/migrations/20260808_society_os_control_plane.sql` to the intended Society OS Supabase project before setting `VISTA_AUDIT_REQUIRED=true` or `VISTA_MEMORY_REQUIRED=true`.
+
+## Local verification
 
 ```bash
 npm install
-npm run dev
+npm run check
 ```
 
-Open `http://localhost:3000`.
-
-## Production build
-
-```bash
-npm run build
-npm start
-```
-
-## API
-
-`POST /api/command`
-
-```json
-{
-  "command": "Check GitHub and show deployment blockers",
-  "source": "web"
-}
-```
-
-`GET /api/status` returns service status.
-
-## Build policy
-
-Reuse → repair → extend → create new only when necessary. The repository is the canonical home for Vista OS application, orchestration, connectors, infrastructure and device bridges.
+See `.env.example`, `docs/SECURITY.md`, and `docs/DEPLOYMENT.md` before binding external connectors.
