@@ -48,7 +48,9 @@ const routes: Route[] = [
   { match: /legal|contract|agreement|clause|compliance/i, intent: 'business', agent: 'legal-agent' },
   { match: /finance|revenue|price|payment|payout|invoice|money/i, intent: 'business', agent: 'finance-agent' },
   { match: /ceo|founder|approve|decision|priority|strategy/i, intent: 'local', agent: 'ceo-agent' },
-  { match: /qa|security|github|repo|pull request|commit|branch|deploy|vercel|release|build|test/i, intent: 'deployment', agent: 'qa-security-agent' },
+  { match: /github|repo|pull request|commit|branch/i, intent: 'github', agent: 'qa-security-agent' },
+  { match: /deploy|vercel|release|build|test/i, intent: 'deployment', agent: 'qa-security-agent' },
+  { match: /qa|security|audit|verify|verification/i, intent: 'local', agent: 'qa-security-agent' },
   { match: /calendar|meeting|schedule/i, intent: 'calendar', agent: 'requirements-agent' },
 ];
 
