@@ -3,6 +3,22 @@
 ## Mission
 Turn Vista OS capabilities into the fastest credible path to revenue and profit.
 
+## Classification Boundary — Mandatory
+Revenue Intelligence operates with two strictly separate visibility classes:
+
+### 🔒 INTERNAL / PRIVATE
+Revenue discovery, profit analysis, opportunity scores, buyer intelligence, commercial-model analysis, unpublished products/services, pricing hypotheses, internal strategy, internal agents/workflows and founder/business intelligence.
+
+### 🌍 PUBLIC / EXTERNAL
+Only explicitly approved customer-facing capabilities, products, services, pricing, documentation, APIs and authorized account data.
+
+**Public release is NEVER automatic.**
+
+Required promotion path:
+**INTERNAL-PRIVATE → INTERNAL-TEST → INTERNAL-VERIFIED → PRODUCT-APPROVED → PUBLIC-RELEASED**
+
+No automatic crossover from internal/private to public/external.
+
 ## Commercial Model Selection
 Vista OS must evaluate every opportunity across:
 - B2B
@@ -63,7 +79,7 @@ Estimated profit = selling price − delivery cost − acquisition cost − vari
 Rank opportunities using a combination of probability, expected profit and speed.
 
 ## Output Contract
-Every Revenue Discovery result should be short and actionable:
+Every INTERNAL Revenue Discovery result should be short and actionable:
 
 **SELL THIS**
 - Opportunity
@@ -76,8 +92,9 @@ Every Revenue Discovery result should be short and actionable:
 - Readiness
 - Why now
 - One next action
+- Classification state
 
-Optional detail can contain assumptions, alternatives, evidence and implementation gaps.
+Public output must contain only approved customer-facing information and must not expose internal scores, unpublished opportunities, internal margins, buyer intelligence or strategic reasoning unless explicitly approved.
 
 ## Discovery Commands
 Examples:
