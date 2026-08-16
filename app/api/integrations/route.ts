@@ -3,9 +3,13 @@ import { getConnectorStatuses } from '@/lib/connectors';
 
 export async function GET() {
   const connectors = getConnectorStatuses();
+  const configured = connectors.filter((item) => item.configured).length;
   return NextResponse.json({
     service: 'vista-os-integrations',
-    status: connectors.every((item) => item.configured) ? 'ready' : 'partial',
+    status: configured === connectors.length ? 'bound' : 'partial',
+    configured,
+    total: connectors.length,
+    productionVerified: false,
     connectors,
   });
 }

@@ -1,9 +1,16 @@
 import { z } from 'zod';
-import { ConnectorId, executeConnector } from '@/lib/connectors';
+import type { Actor } from '@/lib/auth';
+import { assertRiskAllowed } from '@/lib/auth';
+import { executeConnector } from '@/lib/connectors';
+import { createExecutionPlan, type PlanStep } from '@/lib/planner';
+import { classifyCommand, type RiskLevel } from '@/lib/policy';
+import { verifyApprovalToken } from '@/lib/approval';
+import { persistAudit, persistMemory } from '@/lib/persistence';
 
 export const CommandSchema = z.object({
   command: z.string().min(1).max(2000),
   source: z.enum(['web', 'iphone', 'voice', 'agent']).default('web'),
+  approvalToken: z.string().max(4096).optional(),
 });
 
 export type CommandInput = z.infer<typeof CommandSchema>;
@@ -15,42 +22,155 @@ export type ExecutionResult = {
   agent: string;
   message: string;
   verified: boolean;
-  evidence?: unknown;
+  risk: RiskLevel;
+  approvalRequired: boolean;
+  plan: PlanStep[];
+  reasoningMode: string;
+  degradedReason?: string;
+  executions?: Array<{ stepId: string; intent: string; agent: string; state: string; verified: boolean; message: string }>;
+  auditPersisted?: boolean;
+  memoryPersisted?: boolean;
 };
 
-type Route = { match: RegExp; intent: ConnectorId; agent: string };
-
-const routes: Route[] = [
-  { match: /mail|email|inbox/i, intent: 'mail', agent: 'mail-agent' },
-  { match: /github|repo|pull request|commit|branch/i, intent: 'github', agent: 'github-agent' },
-  { match: /calendar|meeting|schedule/i, intent: 'calendar', agent: 'calendar-agent' },
-  { match: /deploy|vercel|release|build/i, intent: 'deployment', agent: 'deployment-agent' },
-  { match: /buyer|licen[cs]e|content|crayons bridge/i, intent: 'business', agent: 'business-agent' },
-];
-
-export async function executeCommand(input: CommandInput): Promise<ExecutionResult> {
+export async function executeCommand(input: CommandInput, context: { actor: Actor }): Promise<ExecutionResult> {
   const parsed = CommandSchema.parse(input);
-  const route = routes.find((candidate) => candidate.match.test(parsed.command));
+  const commandId = crypto.randomUUID();
+  const plan = await createExecutionPlan(parsed.command);
+  const intents = plan.steps.map((step) => step.intent);
+  const policy = classifyCommand(parsed.command, intents);
+  assertRiskAllowed(context.actor, policy.risk);
 
-  if (!route) {
+  const approvalValid = !policy.approvalRequired
+    || verifyApprovalToken(parsed.approvalToken, context.actor, parsed.command, policy.risk);
+
+  if (!approvalValid) {
+    const auditPersisted = await persistAudit({
+      commandId,
+      actor: context.actor,
+      command: parsed.command,
+      intents,
+      risk: policy.risk,
+      decision: 'approval_required',
+    });
     return {
-      id: crypto.randomUUID(),
-      status: 'success',
-      intent: 'general',
-      agent: 'vista-core-agent',
-      message: 'Vista Core accepted and processed the command.',
-      verified: true,
+      id: commandId,
+      status: 'waiting',
+      intent: intents.join(',') || 'general',
+      agent: plan.steps.map((step) => step.agentId).join(',') || 'vista-core-agent',
+      message: policy.reason,
+      verified: false,
+      risk: policy.risk,
+      approvalRequired: true,
+      plan: plan.steps,
+      reasoningMode: plan.mode,
+      degradedReason: plan.degradedReason,
+      auditPersisted,
     };
   }
 
-  const execution = await executeConnector(route.intent, parsed.command);
+  const auditPersisted = await persistAudit({
+    commandId,
+    actor: context.actor,
+    command: parsed.command,
+    intents,
+    risk: policy.risk,
+    decision: 'accepted',
+  });
+
+  if (plan.steps.length === 0) {
+    const message = 'No executable connector route was produced. The command was not externally executed.';
+    const memoryPersisted = await persistMemory({ commandId, actor: context.actor, command: parsed.command, summary: message, verified: false });
+    return {
+      id: commandId,
+      status: 'waiting',
+      intent: 'general',
+      agent: 'vista-core-agent',
+      message,
+      verified: false,
+      risk: policy.risk,
+      approvalRequired: false,
+      plan: [],
+      reasoningMode: plan.mode,
+      degradedReason: plan.degradedReason,
+      auditPersisted,
+      memoryPersisted,
+    };
+  }
+
+  const executions: NonNullable<ExecutionResult['executions']> = [];
+  for (const step of plan.steps) {
+    const result = await executeConnector(step.intent, step.instruction, {
+      actor: context.actor,
+      approved: approvalValid,
+      risk: policy.risk,
+      commandId,
+    });
+    executions.push({
+      stepId: step.id,
+      intent: step.intent,
+      agent: step.agentId,
+      state: result.state,
+      verified: result.verified,
+      message: result.message,
+    });
+    if (!result.ok) break;
+  }
+
+  const anyFailed = executions.some((item) => item.state === 'failed');
+  const anyUnbound = executions.some((item) => item.state === 'unbound');
+  const completedAll = executions.length === plan.steps.length;
+  const verified = completedAll && executions.every((item) => item.state === 'success' && item.verified);
+  const status: ExecutionResult['status'] = anyFailed ? 'failed' : anyUnbound || !completedAll ? 'waiting' : 'success';
+  const message = verified
+    ? `${executions.length} planned step(s) executed with explicit verification.`
+    : `${executions.length}/${plan.steps.length} planned step(s) processed; verification is incomplete.`;
+
+  let finalAuditPersisted = auditPersisted;
+  try {
+    finalAuditPersisted = await persistAudit({
+      commandId,
+      actor: context.actor,
+      command: parsed.command,
+      intents,
+      risk: policy.risk,
+      decision: status,
+      verified,
+      executionSummary: executions,
+    });
+  } catch (error) {
+    return {
+      id: commandId,
+      status: 'failed',
+      intent: intents.join(','),
+      agent: plan.steps.map((step) => step.agentId).join(','),
+      message: `Execution occurred but final audit persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      verified: false,
+      risk: policy.risk,
+      approvalRequired: policy.approvalRequired,
+      plan: plan.steps,
+      reasoningMode: plan.mode,
+      degradedReason: plan.degradedReason,
+      executions,
+      auditPersisted: false,
+      memoryPersisted: false,
+    };
+  }
+
+  const memoryPersisted = await persistMemory({ commandId, actor: context.actor, command: parsed.command, summary: message, verified });
   return {
-    id: crypto.randomUUID(),
-    status: execution.ok ? 'success' : 'waiting',
-    intent: route.intent,
-    agent: route.agent,
-    message: execution.message,
-    verified: execution.verified,
-    evidence: execution.evidence,
+    id: commandId,
+    status,
+    intent: intents.join(','),
+    agent: plan.steps.map((step) => step.agentId).join(','),
+    message,
+    verified,
+    risk: policy.risk,
+    approvalRequired: policy.approvalRequired,
+    plan: plan.steps,
+    reasoningMode: plan.mode,
+    degradedReason: plan.degradedReason,
+    executions,
+    auditPersisted: finalAuditPersisted,
+    memoryPersisted,
   };
 }

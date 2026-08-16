@@ -2,12 +2,15 @@ name: vista-os-ci
 
 on:
   push:
-    branches: [main, "build/**"]
+    branches: [main, "build/**", "feat/**"]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,4 +18,6 @@ jobs:
         with:
           node-version: 24
       - run: npm install
+      - run: npm run typecheck
+      - run: npm test
       - run: npm run build
