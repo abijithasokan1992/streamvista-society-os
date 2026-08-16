@@ -16,3 +16,21 @@ jobs:
           node-version: 24
       - run: npm install
       - run: npm run build
+      - name: Smoke test command center
+        run: |
+          npm run start -- -p 3000 > /tmp/vista-os.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/status > /tmp/status.json; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3000/ > /tmp/root.html
+          curl --fail --silent http://127.0.0.1:3000/core > /tmp/core.html
+          curl --fail --silent http://127.0.0.1:3000/api/read-model > /tmp/read-model.json
+          grep -q 'CORE ONLINE' /tmp/core.html
+          grep -q '"canonicalAgents":9' /tmp/read-model.json
+          grep -q '"commandCenter":"online"' /tmp/status.json
+          grep -q '"canonicalAgentsLoaded":9' /tmp/status.json

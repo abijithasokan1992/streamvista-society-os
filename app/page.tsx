@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type Result = {
@@ -28,6 +29,7 @@ export default function Home() {
 
   const modules = useMemo(() => [
     ['Vista Core', 'ONLINE'],
+    ['Canonical Agents', '9 LOADED'],
     ['Agent Orchestrator', 'ONLINE'],
     ['iPhone / Voice Gateway', 'READY'],
     ...connectors.map((item) => [item.name, item.configured ? 'CONNECTED' : 'UNBOUND']),
@@ -54,18 +56,22 @@ export default function Home() {
       <header className="topbar">
         <div>
           <p className="eyebrow">STREAMVISTA</p>
-          <h1>Vista OS Command Center</h1>
+          <h1>AI Command Center</h1>
         </div>
-        <span className="pill">V1 FULL STACK</span>
+        <span className="pill">FULL STACK CONTROL PLANE</span>
       </header>
 
       <section className="hero panel">
         <div>
           <p className="eyebrow">OWNER CONTROL PLANE</p>
-          <h2>One command. The correct agent. Verified execution.</h2>
-          <p className="muted">Web, iPhone, voice, agents and StreamVista workflows share one execution plane. External actions only show verified after a bound connector returns evidence.</p>
+          <h2>One command room. Nine canonical agents. Production truth.</h2>
+          <p className="muted">Web, voice, agents and StreamVista workflows share one control plane. External actions are only marked verified after a bound connector returns evidence.</p>
+          <div className="heroActions">
+            <Link href="/core" className="coreLaunch">OPEN FULL-SCREEN CORE ONLINE</Link>
+            <span>Revolving 9-agent core · live read model · full audio controls</span>
+          </div>
         </div>
-        <div className="health"><span className="dot" /> Core healthy</div>
+        <div className="health"><span className="dot" /> Control plane online</div>
       </section>
 
       <section className="grid">
@@ -83,10 +89,10 @@ export default function Home() {
           <textarea
             value={command}
             onChange={(e) => setCommand(e.target.value)}
-            placeholder="Example: Check GitHub and show deployment blockers"
+            placeholder="Example: Check rights for a buyer opportunity"
             aria-label="Vista command"
           />
-          <button disabled={running}>{running ? 'Running…' : 'Execute'}</button>
+          <button disabled={running}>{running ? 'Routing…' : 'Route command'}</button>
         </form>
         {result && (
           <div className="result">
